@@ -1,7 +1,15 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'>
-  <rect width='180' height='180' rx='40' fill='#f7f1e3'/>
-  <g transform='translate(90,90) scale(4.5) translate(-12,-12)' stroke='#6b8e3d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'>
-    <path d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2.96a1 1 0 0 1 1.6.8c0 6.66-1.4 13.78-9.8 16.24'/>
-    <path d='M2 22 17 7'/>
+  <!-- 背景: 生成り色 -->
+  <rect width='180' height='180' rx='38' fill='#f7f1e3'/>
+  <!-- 葉っぱ: 塗りつぶし + 輪郭 -->
+  <g transform='translate(90,95) scale(5.8) translate(-12,-12)'>
+    <!-- 葉の塗りつぶし形状 -->
+    <path d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2.96a1 1 0 0 1 1.6.8c0 6.66-1.4 13.78-9.8 16.24Z'
+          fill='#6b8e3d' opacity='0.9'/>
+    <!-- 葉脈の線 -->
+    <path d='M2 22 17 7' stroke='#4f6b2a' stroke-width='1.8' stroke-linecap='round' fill='none'/>
+    <!-- 輪郭線 -->
+    <path d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2.96a1 1 0 0 1 1.6.8c0 6.66-1.4 13.78-9.8 16.24'
+          stroke='#4f6b2a' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round' fill='none'/>
   </g>
 </svg>
