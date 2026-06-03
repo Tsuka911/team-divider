@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日程しらべ｜チーム分け</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="日程しらべ">
+<link rel="apple-touch-icon" href="date_icon.png?v=1">
+<link rel="icon" type="image/png" href="date_icon.png?v=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&family=Noto+Serif+JP:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --kinari:      #f7f1e3;
+    --kinari-deep: #efe6cf;
+    --washi:       #fdfaf1;
+    --sumi:        #2c2620;
+    --sumi-soft:   #5a4f44;
+    --sumi-mute:   #8c8074;
+    --line:        #e3d8bf;
+    --line-soft:   #ede2c8;
+    --matcha:      #6b8e3d;
+    --matcha-d:    #4f6b2a;
+    --matcha-l:    #e9efd6;
+    --akane:       #b8463a;
+    --akane-l:     #f5dfd8;
+    --ai:          #38637a;
+    --ai-l:        #dbe6ec;
+    --kuchi:       #c98a3a;
+    --kuchi-l:     #f4e6cf;
+    --shadow-paper: 0 1px 0 rgba(120,90,50,0.06), 0 6px 18px -8px rgba(80,60,30,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+    color: var(--sumi); font-feature-settings: "palt"; line-height: 1.6;
+  }
+  body {
+    min-height: 100vh; background-color: var(--kinari);
+    background-image:
+      radial-gradient(at 8% 4%, rgba(180,140,90,0.10) 0, transparent 38%),
+      radial-gradient(at 92% 96%, rgba(120,90,60,0.08) 0, transparent 50%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='5'/><feColorMatrix values='0 0 0 0 0.42  0 0 0 0 0.32  0 0 0 0 0.20  0 0 0 0.07 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-size: auto, auto, 260px 260px;
+  }
+  .td-icon { display: inline-block; vertical-align: -3px; flex-shrink: 0; }
+  .container { max-width: 720px; margin: 0 auto; padding: 28px 20px 64px; }
+
+  header {
+    padding: 8px 0 28px; border-bottom: 1px solid var(--line); margin-bottom: 22px;
+    display: flex; align-items: flex-end; gap: 16px;
+  }
+  .brand-mark {
+    width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0; overflow: hidden;
+    border: 1px solid rgba(80,60,30,0.08); background: var(--washi);
+    box-shadow: 0 1px 2px rgba(80,60,30,0.06), 0 6px 14px -6px rgba(80,60,30,0.18);
+  }
+  .brand-mark img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  header h1 { font-family: 'Noto Serif JP', serif; font-weight: 700; font-size: 26px; letter-spacing: 0.04em; line-height: 1.2; }
+  header .sub { font-size: 12px; color: var(--sumi-mute); margin-top: 4px; letter-spacing: 0.08em; }
+  header .meta-line { flex: 1; }
+  header .home-link { font-size: 12px; color: var(--sumi-soft); text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 7px 11px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
+  header .home-link:hover { background: var(--kinari-deep); }
+
+  .sheet {
+    position: relative; background-color: var(--washi);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 0.40  0 0 0 0 0.30  0 0 0 0 0.20  0 0 0 0.04 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    border: 1px solid var(--line); border-radius: 4px; padding: 22px 22px 20px; margin-bottom: 16px; box-shadow: var(--shadow-paper);
+  }
+  .sheet-step {
+    position: absolute; top: 0; left: 0; background: var(--sumi); color: var(--washi);
+    font-family: 'Noto Serif JP', serif; font-weight: 700; font-size: 13px;
+    padding: 5px 14px 5px 12px; letter-spacing: 0.15em; border-bottom-right-radius: 2px;
+  }
+  .sheet-step .num { color: var(--matcha-l); font-size: 11px; margin-right: 6px; }
+  .sheet-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; margin: 18px 0 4px; letter-spacing: 0.04em; }
+  .sheet-title .ic { color: var(--matcha-d); }
+  .sheet-title .opt { font-size: 11px; color: var(--sumi-mute); font-weight: 400; letter-spacing: 0.05em; }
+  .sheet-desc { font-size: 13px; color: var(--sumi-soft); margin-bottom: 16px; line-height: 1.7; }
+
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .seg { display: inline-flex; padding: 3px; background: var(--kinari-deep); border-radius: 999px; border: 1px solid var(--line); margin-bottom: 14px; flex-wrap: wrap; }
+  .seg button {
+    appearance: none; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 500;
+    color: var(--sumi-soft); padding: 7px 16px; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; transition: all 0.18s;
+  }
+  .seg button.on { background: var(--washi); color: var(--sumi); font-weight: 600; box-shadow: 0 1px 2px rgba(80,60,30,0.10), 0 0 0 1px var(--line) inset; }
+
+  textarea, input[type="text"], input[type="number"], select {
+    width: 100%; border: 1px solid var(--line); background: var(--washi); border-radius: 6px;
+    padding: 11px 13px; font-family: inherit; font-size: 15px; color: var(--sumi); outline: none;
+    transition: border-color 0.18s, box-shadow 0.18s;
+  }
+  textarea { min-height: 110px; resize: vertical; line-height: 1.7; }
+  textarea:focus, input:focus, select:focus { border-color: var(--matcha); box-shadow: 0 0 0 3px rgba(107,142,61,0.15); }
+  input[type="number"] { width: 92px; text-align: center; font-variant-numeric: tabular-nums; }
+
+  .hint { font-size: 12px; color: var(--sumi-mute); margin-top: 8px; line-height: 1.6; display: flex; gap: 6px; align-items: flex-start; }
+  .hint .ic { color: var(--sumi-mute); flex-shrink: 0; margin-top: 1px; }
+  .count-pill { display: inline-flex; align-items: center; gap: 6px; background: var(--matcha-l); color: var(--matcha-d); font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+
+  .btn { appearance: none; border: 0; cursor: pointer; font-family: inherit; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 7px; transition: all 0.15s; letter-spacing: 0.04em; }
+  .btn-primary { width: 100%; background: var(--sumi); color: var(--washi); padding: 16px 18px; border-radius: 8px; font-size: 16px; box-shadow: 0 2px 0 #1a1612, 0 10px 24px -10px rgba(40,30,20,0.5); position: relative; }
+  .btn-primary::before { content: ""; position: absolute; inset: 4px; border: 1px solid rgba(255,255,255,0.12); border-radius: 5px; pointer-events: none; }
+  .btn-primary:hover { transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(1px); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-ghost { background: transparent; color: var(--sumi); border: 1px solid var(--line); padding: 9px 14px; border-radius: 6px; font-size: 13px; }
+  .btn-ghost:hover { background: var(--kinari-deep); border-color: var(--sumi-mute); }
+  .btn-tonal { background: var(--matcha-l); color: var(--matcha-d); padding: 9px 14px; border-radius: 6px; font-size: 13px; }
+  .btn-tonal:hover { background: #dee6c0; }
+  .btn-akane { background: var(--akane-l); color: var(--akane); padding: 9px 14px; border-radius: 6px; font-size: 13px; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+  .err { display: none; background: var(--akane-l); border-left: 3px solid var(--akane); color: var(--akane); padding: 10px 14px; border-radius: 4px; font-size: 13px; margin: 12px 0 0; }
+  .err.show { display: flex; align-items: center; gap: 8px; }
+
+  /* File picker */
+  .file-drop { border: 1px dashed var(--sumi-mute); border-radius: 8px; padding: 22px 16px; text-align: center; background: var(--kinari); cursor: pointer; transition: all 0.15s; }
+  .file-drop:hover { border-color: var(--matcha); background: var(--matcha-l); }
+  .file-drop .ic { color: var(--matcha-d); }
+  .file-drop .big { font-size: 14px; font-weight: 600; margin-top: 8px; }
+  .file-drop .small { font-size: 11px; color: var(--sumi-mute); margin-top: 4px; }
+
+  /* Member confirm rows */
+  .mrow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px dashed var(--line); }
+  .mrow:last-child { border-bottom: none; }
+  .mrow input[type="text"] { font-size: 14px; padding: 8px 11px; }
+  .mrow.excluded input { text-decoration: line-through; opacity: 0.45; }
+
+  /* Matrix */
+  .matrix-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: 6px; }
+  table.matrix { border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+  table.matrix th, table.matrix td { border: 1px solid var(--line-soft); padding: 7px 9px; text-align: center; }
+  table.matrix thead th { background: var(--kinari-deep); font-weight: 600; font-size: 12px; position: sticky; top: 0; }
+  table.matrix .name-col { position: sticky; left: 0; background: var(--washi); text-align: left; font-weight: 600; z-index: 2; min-width: 96px; }
+  table.matrix thead .name-col { z-index: 3; background: var(--kinari-deep); }
+  table.matrix .date-head { vertical-align: bottom; }
+  table.matrix .date-head .lbl { display: block; max-width: 130px; white-space: normal; word-break: break-word; line-height: 1.3; }
+  table.matrix .date-head label { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; color: var(--akane); font-weight: 500; margin-top: 4px; cursor: pointer; }
+  table.matrix col.excluded, table.matrix td.excluded { background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(184,70,58,0.06) 5px, rgba(184,70,58,0.06) 10px); }
+  table.matrix .maru { color: var(--matcha-d); font-weight: 700; }
+  table.matrix .sankaku { color: var(--kuchi); font-weight: 700; }
+  table.matrix .batsu { color: var(--sumi-mute); }
+  table.matrix tfoot td { background: var(--kinari); font-size: 11px; color: var(--sumi-soft); }
+  .excluded-th { background: var(--akane-l) !important; }
+
+  /* Candidate cards */
+  .cand { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; background: var(--washi); }
+  .cand.best { border-color: var(--matcha); box-shadow: 0 0 0 2px var(--matcha-l); }
+  .cand-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .cand-rank { font-family: 'Noto Serif JP', serif; font-weight: 700; font-size: 13px; color: var(--matcha-d); }
+  .cand-total { font-size: 20px; font-weight: 700; color: var(--sumi); }
+  .cand-total .u { font-size: 12px; font-weight: 500; color: var(--sumi-mute); margin-left: 2px; }
+  .cand-days { font-size: 13px; color: var(--sumi-soft); line-height: 1.8; }
+  .cand-days .day { display: inline-block; background: var(--kinari-deep); border-radius: 4px; padding: 2px 9px; margin: 2px 4px 2px 0; }
+  .cand-days .day b { color: var(--matcha-d); }
+  .cand-miss { font-size: 12px; color: var(--akane); margin-top: 6px; }
+  .cand-actions { margin-top: 10px; }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 460px) {
+    .container { padding: 18px 14px 48px; }
+    header h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="brand-mark" id="brand-mark" aria-hidden="true"></div>
+    <div class="meta-line">
+      <h1>日程しらべ</h1>
+      <div class="sub">調整さんの結果から、いちばん集まれる日を。</div>
+    </div>
+    <a class="home-link" href="index.html"><span class="ic" data-ic="groups"></span>チーム分け</a>
+  </header>
+
+  <!-- STEP 1: CSV読み込み -->
+  <section class="sheet">
+    <div class="sheet-step"><span class="num">壱</span>STEP 1</div>
+    <h2 class="sheet-title"><span class="ic" data-ic="upload"></span>調整さんのCSVを読み込む</h2>
+    <p class="sheet-desc">調整さんのイベントページで「出欠表をダウンロード」して保存したCSVファイルを選んでください。</p>
+
+    <input type="file" id="csv-file" accept=".csv,text/csv,text/plain" style="display:none;">
+    <div class="file-drop" id="file-drop" onclick="document.getElementById('csv-file').click()">
+      <span class="ic" data-ic="upload" data-size="26"></span>
+      <div class="big">CSVファイルを選ぶ</div>
+      <div class="small">タップしてファイルを選択（Web版・アプリ版どちらのCSVでもOK）</div>
+    </div>
+
+    <div style="margin-top:14px;">
+      <button class="btn btn-ghost btn-sm" onclick="togglePaste()"><span class="ic" data-ic="edit"></span>または、CSVの中身を貼り付ける</button>
+      <div id="paste-area" class="hidden" style="margin-top:10px;">
+        <textarea id="paste-ta" placeholder="調整さんのCSVをそのまま貼り付け"></textarea>
+        <button class="btn btn-tonal btn-sm" style="margin-top:8px;" onclick="parsePasted()"><span class="ic" data-ic="arrowRight"></span>読み込む</button>
+      </div>
+    </div>
+
+    <div class="err" id="err-box"><span class="ic" data-ic="x"></span><span id="err-text"></span></div>
+  </section>
+
+  <!-- STEP 2: 取り込み確認 -->
+  <section class="sheet hidden" id="confirm-card">
+    <div class="sheet-step"><span class="num">弐</span>STEP 2</div>
+    <h2 class="sheet-title"><span class="ic" data-ic="users"></span>取り込み内容の確認 <span class="opt">必要なら修正</span></h2>
+    <p class="sheet-desc">同じ人が違う表記（例：太郎／たろう）になっていたら名前を直してください。参加しない人は「除外」できます。</p>
+    <div class="count-pill" id="confirm-pill"></div>
+    <div id="member-list" style="margin-top:12px;"></div>
+  </section>
+
+  <!-- STEP 3: 一覧表 -->
+  <section class="sheet hidden" id="matrix-card">
+    <div class="sheet-step"><span class="num">参</span>STEP 3</div>
+    <h2 class="sheet-title"><span class="ic" data-ic="list"></span>みんなの出欠 一覧</h2>
+    <p class="sheet-desc">○＝行ける、△＝条件付き、×＝行けない。売り切れなどで使えない日は、日付の下の「除外」にチェックを入れてください。</p>
+    <div class="matrix-wrap" id="matrix-wrap"></div>
+  </section>
+
+  <!-- STEP 4: 最適な開催日 -->
+  <section class="sheet hidden" id="analyze-card">
+    <div class="sheet-step"><span class="num">肆</span>STEP 4</div>
+    <h2 class="sheet-title"><span class="ic" data-ic="sparkle"></span>いちばん集まれる日</h2>
+    <p class="sheet-desc">開催する日数を選ぶと、参加できる人の合計（重複なし）が最も多くなる組み合わせを提案します。</p>
+
+    <div class="row" style="margin-bottom:6px;">
+      <span style="font-size:13px;font-weight:600;">開催する日数</span>
+      <input type="number" id="k-val" min="1" max="10" value="2">
+      <span style="font-size:13px;color:var(--sumi-mute);">日</span>
+    </div>
+
+    <div class="seg" id="maybe-seg" style="margin-top:10px;">
+      <button id="maybe-off" class="on" onclick="setMaybe(false)">△は数えない</button>
+      <button id="maybe-on" onclick="setMaybe(true)">△も参加できる人に数える</button>
+    </div>
+
+    <div id="analyze-result" style="margin-top:6px;"></div>
+  </section>
+
+</div>
+
+<script>
+/* ============== SVG Icons（index.html と共通＋追加） ============== */
+window.TDIcons = (function() {
+  const ic = {};
+  const wrap = (inner, size = 18, extraClass = '') =>
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="td-icon ${extraClass}">${inner}</svg>`;
+  ic.users    = s => wrap(`<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`, s);
+  ic.user     = s => wrap(`<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>`, s);
+  ic.check    = s => wrap(`<polyline points="20 6 9 17 4 12"/>`, s);
+  ic.x        = s => wrap(`<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>`, s);
+  ic.plus     = s => wrap(`<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>`, s);
+  ic.edit     = s => wrap(`<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>`, s);
+  ic.trash    = s => wrap(`<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>`, s);
+  ic.arrowRight = s => wrap(`<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>`, s);
+  ic.sparkle  = s => wrap(`<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>`, s);
+  ic.list     = s => wrap(`<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>`, s);
+  ic.groups   = s => wrap(`<circle cx="7" cy="9" r="2.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/><path d="M13 18c0-2.2 1.8-4 4-4s4 1.8 4 4"/>`, s);
+  ic.upload   = s => wrap(`<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>`, s);
+  ic.shuffle  = s => wrap(`<polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/>`, s);
+  return { get: (name, size = 18, cls = '') => (ic[name] || ic.user)(size, cls) };
+})();
+
+function hydrateIcons(root = document) {
+  root.querySelectorAll('[data-ic]').forEach(el => {
+    if (el.dataset.icHydrated) return;
+    el.innerHTML = window.TDIcons.get(el.dataset.ic, parseInt(el.dataset.size) || 16);
+    el.dataset.icHydrated = '1';
+  });
+}
+document.getElementById('brand-mark').innerHTML = '<img src="date_icon.png?v=1" alt="">';
+hydrateIcons();
+const _obs = new MutationObserver(() => hydrateIcons());
+_obs.observe(document.body, { childList: true, subtree: true });
+
+/* ============== State ============== */
+// members: [{ name, excluded }]
+// dates:   [{ label, answers: ['○'|'△'|'×'|'', ...], excluded }]   answers[memberIndex] と対応
+let members = [];
+let dates   = [];
+let includeMaybe = false;
+
+/* ============== CSV読み込み ============== */
+document.getElementById('csv-file').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const text = decodeBuffer(ev.target.result);
+    handleText(text);
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+function decodeBuffer(buf) {
+  const bytes = new Uint8Array(buf);
+  // まず UTF-8 で試し、文字化け（置換文字）が出たら Shift-JIS に切り替え
+  let utf8 = '';
+  try { utf8 = new TextDecoder('utf-8', { fatal: false }).decode(bytes); } catch { utf8 = ''; }
+  if (utf8 && !utf8.includes('�')) return utf8;
+  try {
+    const sjis = new TextDecoder('shift_jis').decode(bytes);
+    if (sjis) return sjis;
+  } catch { /* shift_jis 非対応環境は utf8 にフォールバック */ }
+  return utf8;
+}
+
+function togglePaste() { document.getElementById('paste-area').classList.toggle('hidden'); }
+function parsePasted() {
+  const text = document.getElementById('paste-ta').value;
+  if (!text.trim()) return showErr('CSVの中身を貼り付けてください');
+  handleText(text);
+}
+
+function handleText(text) {
+  hideErr();
+  try {
+    const rows = parseCSV(text);
+    const parsed = interpretChouseisan(rows);
+    if (!parsed) return showErr('CSVを読み取れませんでした。調整さんの「出欠表ダウンロード」のCSVか確認してください。');
+    if (parsed.members.length < 1) return showErr('参加者が見つかりませんでした。');
+    if (parsed.dates.length < 1) return showErr('日程候補が見つかりませんでした。');
+    members = parsed.members.map(name => ({ name, excluded: false }));
+    dates = parsed.dates.map(d => ({ label: d.label, answers: d.answers, excluded: false }));
+    renderConfirm();
+    renderMatrix();
+    recompute();
+    document.getElementById('confirm-card').classList.remove('hidden');
+    document.getElementById('matrix-card').classList.remove('hidden');
+    document.getElementById('analyze-card').classList.remove('hidden');
+    document.getElementById('matrix-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    showErr('読み込み中にエラーが発生しました：' + err.message);
+  }
+}
+
+/* CSVパーサ（カンマ区切り・ダブルクオート・セル内改行に対応） */
+function parseCSV(text) {
+  text = text.replace(/^﻿/, '');           // BOM除去
+  const rows = []; let row = []; let cell = ''; let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { cell += '"'; i++; }
+        else inQuotes = false;
+      } else cell += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+      else if (c === '\r') { /* skip */ }
+      else cell += c;
+    }
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim() !== ''));   // 空行除外
+}
+
+/* 記号の正規化 */
+function normSymbol(s) {
+  if (!s) return '';
+  const t = s.trim();
+  if (/[○◯〇oO]/.test(t)) return '○';
+  if (/[△▲]/.test(t)) return '△';
+  if (/[×✕✖xX]/.test(t)) return '×';
+  return '';
+}
+function isSymbolCell(s) { return normSymbol(s) !== ''; }
+
+/* 調整さんCSVの構造を解釈（行＝日程候補、列＝参加者） */
+function interpretChouseisan(rows) {
+  if (!rows.length) return null;
+  // 各行の「記号らしさ」を測り、最初のデータ行（記号が並ぶ行）を見つける
+  const symbolScore = r => {
+    const cells = r.slice(1);
+    if (!cells.length) return 0;
+    const sym = cells.filter(isSymbolCell).length;
+    return sym / cells.length;
+  };
+  let firstData = -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (symbolScore(rows[i]) >= 0.4) { firstData = i; break; }
+  }
+  if (firstData <= 0) return null;             // ヘッダ行が手前に必要
+  const headerRow = rows[firstData - 1];       // 参加者名の行
+  // 参加者名（先頭セルは「日程」等のラベルなので除く）
+  const colNames = [];
+  for (let c = 1; c < headerRow.length; c++) colNames.push((headerRow[c] || '').trim());
+  // 末尾の空列を落とす
+  while (colNames.length && colNames[colNames.length - 1] === '') colNames.pop();
+  const memberCols = colNames.map((n, idx) => ({ name: n, col: idx + 1 })).filter(m => m.name !== '');
+  if (!memberCols.length) return null;
+
+  const outDates = [];
+  for (let i = firstData; i < rows.length; i++) {
+    const r = rows[i];
+    const label = (r[0] || '').trim();
+    if (!label) continue;
+    if (/^コメント/.test(label)) continue;     // コメント行はスキップ
+    if (symbolScore(r) < 0.4 && i !== firstData) continue;  // 記号が並ばない行はスキップ
+    const answers = memberCols.map(m => normSymbol(r[m.col]));
+    if (answers.every(a => a === '')) continue; // 全部空はスキップ
+    outDates.push({ label, answers });
+  }
+  return { members: memberCols.map(m => m.name), dates: outDates };
+}
+
+/* ============== STEP2: 取り込み確認 ============== */
+function renderConfirm() {
+  const active = members.filter(m => !m.excluded).length;
+  document.getElementById('confirm-pill').innerHTML =
+    window.TDIcons.get('check', 13) + ` 日程 ${dates.length} 件 ／ 参加者 ${active} 名`;
+  const c = document.getElementById('member-list');
+  c.innerHTML = '';
+  members.forEach((m, mi) => {
+    const row = document.createElement('div'); row.className = 'mrow' + (m.excluded ? ' excluded' : '');
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.value = m.name;
+    inp.addEventListener('input', function() { members[mi].name = this.value; renderMatrix(); recompute(); });
+    const btn = document.createElement('button');
+    btn.className = m.excluded ? 'btn btn-tonal btn-sm' : 'btn btn-ghost btn-sm';
+    btn.innerHTML = m.excluded ? (window.TDIcons.get('plus', 12) + ' 戻す') : (window.TDIcons.get('trash', 12) + ' 除外');
+    btn.onclick = () => { members[mi].excluded = !members[mi].excluded; renderConfirm(); renderMatrix(); recompute(); };
+    row.appendChild(inp); row.appendChild(btn);
+    c.appendChild(row);
+  });
+}
+
+/* ============== STEP3: 一覧表 ============== */
+function renderMatrix() {
+  const wrap = document.getElementById('matrix-wrap');
+  const mIdx = members.map((m, i) => i).filter(i => !members[i].excluded);
+  let html = '<table class="matrix"><thead><tr><th class="name-col">名前</th>';
+  dates.forEach((d, di) => {
+    html += `<th class="date-head${d.excluded ? ' excluded-th' : ''}">
+      <span class="lbl">${esc(d.label)}</span>
+      <label><input type="checkbox" ${d.excluded ? 'checked' : ''} onchange="toggleExclude(${di}, this.checked)"> 除外</label>
+    </th>`;
+  });
+  html += '</tr></thead><tbody>';
+  mIdx.forEach(mi => {
+    html += `<tr><td class="name-col">${esc(members[mi].name)}</td>`;
+    dates.forEach((d, di) => {
+      const a = d.answers[mi] || '';
+      const cls = a === '○' ? 'maru' : a === '△' ? 'sankaku' : a === '×' ? 'batsu' : '';
+      html += `<td class="${d.excluded ? 'excluded' : ''} ${cls}">${a || '－'}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody><tfoot><tr><td class="name-col">○ / △</td>';
+  dates.forEach((d, di) => {
+    const cnt = countDay(di);
+    html += `<td class="${d.excluded ? 'excluded' : ''}">${cnt.maru} / ${cnt.sankaku}</td>`;
+  });
+  html += '</tr></tfoot></table>';
+  wrap.innerHTML = html;
+}
+function toggleExclude(di, checked) { dates[di].excluded = checked; renderMatrix(); recompute(); }
+function countDay(di) {
+  let maru = 0, sankaku = 0;
+  members.forEach((m, mi) => {
+    if (m.excluded) return;
+    const a = dates[di].answers[mi] || '';
+    if (a === '○') maru++; else if (a === '△') sankaku++;
+  });
+  return { maru, sankaku };
+}
+
+/* ============== STEP4: 最適日分析 ============== */
+function setMaybe(v) {
+  includeMaybe = v;
+  document.getElementById('maybe-off').classList.toggle('on', !v);
+  document.getElementById('maybe-on').classList.toggle('on', v);
+  recompute();
+}
+document.getElementById('k-val').addEventListener('input', recompute);
+
+// その日に参加できる人（memberIndex の Set）
+function availableSet(di) {
+  const set = new Set();
+  members.forEach((m, mi) => {
+    if (m.excluded) return;
+    const a = dates[di].answers[mi] || '';
+    if (a === '○' || (includeMaybe && a === '△')) set.add(mi);
+  });
+  return set;
+}
+function combinations(arr, k) {
+  const res = [];
+  const rec = (start, combo) => {
+    if (combo.length === k) { res.push(combo.slice()); return; }
+    for (let i = start; i < arr.length; i++) { combo.push(arr[i]); rec(i + 1, combo); combo.pop(); }
+  };
+  rec(0, []);
+  return res;
+}
+
+function recompute() {
+  const out = document.getElementById('analyze-result');
+  const activeDates = dates.map((d, i) => i).filter(i => !dates[i].excluded);
+  let k = parseInt(document.getElementById('k-val').value);
+  if (!k || k < 1) { out.innerHTML = '<p class="hint"><span class="ic" data-ic="sparkle"></span>開催日数を1以上で入力してください</p>'; return; }
+  if (k > activeDates.length) k = activeDates.length;
+  if (activeDates.length === 0) { out.innerHTML = '<p class="hint"><span class="ic" data-ic="x"></span>候補日がすべて除外されています</p>'; return; }
+
+  const sets = {}; activeDates.forEach(di => sets[di] = availableSet(di));
+  const combos = combinations(activeDates, k).map(combo => {
+    const union = new Set();
+    combo.forEach(di => sets[di].forEach(mi => union.add(mi)));
+    const perDay = combo.map(di => ({ di, count: sets[di].size }));
+    const counts = perDay.map(p => p.count);
+    const spread = Math.max(...counts) - Math.min(...counts);   // 偏りの小ささ（同点の並べ替え用）
+    return { combo, total: union.size, union, perDay, spread };
+  });
+  combos.sort((a, b) => b.total - a.total || a.spread - b.spread);
+
+  const activeMembers = members.map((m, i) => i).filter(i => !members[i].excluded);
+  const top = combos.slice(0, 5);
+  let html = '';
+  top.forEach((cand, rank) => {
+    const missing = activeMembers.filter(mi => !cand.union.has(mi)).map(mi => members[mi].name);
+    const daysHtml = cand.perDay.map(p =>
+      `<span class="day">${esc(dates[p.di].label)} <b>${p.count}人</b></span>`).join('');
+    html += `<div class="cand${rank === 0 ? ' best' : ''}">
+      <div class="cand-head">
+        <span class="cand-rank">${rank === 0 ? '◎ おすすめ' : '第' + (rank + 1) + '案'}</span>
+        <span class="cand-total">のべ ${cand.total}<span class="u">人 参加可能</span></span>
+      </div>
+      <div class="cand-days">${daysHtml}</div>
+      ${missing.length ? `<div class="cand-miss">どの日も参加できない：${esc(missing.join('、'))}</div>` : '<div class="cand-miss" style="color:var(--matcha-d)">全員が参加できます</div>'}
+      <div class="cand-actions">
+        <button class="btn btn-tonal btn-sm" onclick='goToDivide(${JSON.stringify(cand.combo)})'>
+          <span class="ic" data-ic="shuffle"></span>この日程でチーム分けへ
+        </button>
+      </div>
+    </div>`;
+  });
+  out.innerHTML = html;
+}
+
+/* ============== チーム分けへ連動 ============== */
+function goToDivide(combo) {
+  // combo: 採用した日程の dateIndex 配列
+  const sets = combo.map(di => availableSet(di));
+  // 参加者プール = いずれかの採用日に参加できる人（重複なし）
+  const unionIdx = [];
+  members.forEach((m, mi) => {
+    if (m.excluded) return;
+    if (sets.some(s => s.has(mi))) unionIdx.push(mi);
+  });
+  if (unionIdx.length < 2) { alert('参加できる人が2名以上必要です'); return; }
+
+  const pool = unionIdx.map(mi => members[mi].name);
+  const teamNames = combo.map(di => dates[di].label);
+  // 1日しか参加できない人 → その日に固定
+  const fixed = {};
+  unionIdx.forEach((mi, poolPos) => {
+    const okDays = combo.map((di, ci) => ci).filter(ci => sets[ci].has(mi));
+    if (okDays.length === 1) fixed[poolPos] = okDays[0];
+  });
+
+  const payload = { pool, teamCount: combo.length, teamNames, fixed };
+  localStorage.setItem('td_handoff', JSON.stringify(payload));
+  location.href = 'index.html';
+}
+
+/* ============== Helpers ============== */
+function showErr(msg) { document.getElementById('err-text').textContent = msg; document.getElementById('err-box').classList.add('show'); }
+function hideErr() { document.getElementById('err-box').classList.remove('show'); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>

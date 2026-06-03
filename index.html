@@ -363,6 +363,9 @@
       <h1>チーム分け</h1>
       <div class="sub">公平に、すこやかに。</div>
     </div>
+    <a href="schedule.html" style="font-size:12px;color:var(--sumi-soft);text-decoration:none;border:1px solid var(--line);border-radius:6px;padding:7px 11px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;">
+      <span class="ic" data-ic="history"></span>日程しらべ
+    </a>
   </header>
 
   <div class="lock-bar" id="lock-bar">
@@ -580,6 +583,7 @@ let separatePairs = [];
 let savedConfig   = null;
 let lastTeams     = null;
 let teamNames     = [];
+let pendingTeamNames = null;   // 日程分析から受け取ったチーム名（＝開催日）
 let inputMode     = 'names';
 let teamMode      = 'count';
 
@@ -598,7 +602,63 @@ const ACCENTS = [
   }
   renderPresetSelect();
   renderHistory();
+  applyHandoff();
 })();
+
+/* ============== 日程分析からの受け取り ============== */
+function applyHandoff() {
+  let payload;
+  try { payload = JSON.parse(localStorage.getItem('td_handoff') || 'null'); } catch { payload = null; }
+  if (!payload || !Array.isArray(payload.pool) || payload.pool.length < 2) return;
+  localStorage.removeItem('td_handoff');   // 再読込での二重適用を防ぐ
+
+  // メンバーを流し込む（restoreFromStorage と同じ手順）
+  const text = payload.pool.join('\n');
+  const ta = document.getElementById('names-ta');
+  ta.value = text;
+  ta.dispatchEvent(new Event('input'));
+  document.getElementById('restore-btn').classList.add('hidden');
+  members = payload.pool.map(name => ({ name, tags: [], level: null }));
+  togetherPairs = []; separatePairs = [];
+  renderTagsList(); renderPairList('together'); renderPairList('separate');
+  refreshPairSelects();
+  ['attr-card','pair-card','fixed-card'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+  document.getElementById('parse-btn').classList.add('hidden');
+  document.getElementById('re-enter-btn').classList.remove('hidden');
+
+  // チーム数（＝開催日数）とチーム名（＝日付）
+  setTeamMode('count');
+  const tc = Math.max(2, parseInt(payload.teamCount) || 2);
+  document.getElementById('team-val').value = tc;
+  if (Array.isArray(payload.teamNames) && payload.teamNames.length === tc) {
+    pendingTeamNames = payload.teamNames.map(String);
+  }
+
+  // 固定メンバー（1日しか参加できない人 → その日に固定）
+  refreshFixedList();
+  if (payload.fixed && typeof payload.fixed === 'object') {
+    Object.entries(payload.fixed).forEach(([mi, ti]) => {
+      const sel = document.getElementById(`fs-${mi}`);
+      if (sel && Number(ti) < tc) sel.value = String(ti);
+    });
+  }
+
+  // 受け取りバナー
+  showHandoffBanner(pendingTeamNames || []);
+  hideErr();
+}
+
+function showHandoffBanner(dayNames) {
+  if (document.getElementById('handoff-banner')) return;
+  const zone = document.getElementById('input-zone');
+  const bar = document.createElement('div');
+  bar.id = 'handoff-banner';
+  bar.style.cssText = 'display:flex;align-items:center;gap:10px;background:var(--matcha-l);border:1px solid #d3deae;border-left:3px solid var(--matcha);border-radius:6px;padding:11px 14px;margin-bottom:16px;font-size:13px;color:var(--matcha-d);';
+  const days = dayNames.length ? `（${dayNames.join('・')}）` : '';
+  bar.innerHTML = `<span class="ic" data-ic="check"></span><span style="flex:1;font-weight:500;">日程分析から参加者を受け取りました${days}。このまま「チームに分ける」を押してください。</span>`;
+  zone.insertBefore(bar, zone.firstChild);
+  hydrateIcons(bar);
+}
 
 /* ============== Mode switches ============== */
 function setInputMode(mode) {
@@ -857,7 +917,9 @@ function divideTeams() {
       if (sel && sel.value !== '') { const ti = parseInt(sel.value); if (ti < tc) fixed[mi] = ti; }
     });
   }
-  teamNames = Array.from({length: tc}, (_, i) => `チーム ${teamLbl(i)}`);
+  teamNames = (pendingTeamNames && pendingTeamNames.length === tc)
+    ? [...pendingTeamNames]
+    : Array.from({length: tc}, (_, i) => `チーム ${teamLbl(i)}`);
   savedConfig = {
     pool: pool.map(m => ({...m, tags:[...m.tags]})), tc, fixed,
     togetherPairs: togetherPairs.map(p => [...p]),
@@ -1166,6 +1228,8 @@ function resetAll() {
   document.getElementById('input-zone').classList.remove('locked');
   document.getElementById('lock-bar').classList.remove('show');
   members = []; savedConfig = null; lastTeams = null; teamNames = [];
+  pendingTeamNames = null;
+  document.getElementById('handoff-banner')?.remove();
   togetherPairs = []; separatePairs = [];
   document.getElementById('results-section').style.display = 'none';
   document.getElementById('names-ta').value = '';
