@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="日程しらべ">
-<link rel="apple-touch-icon" href="date_icon.png?v=1">
-<link rel="icon" type="image/png" href="date_icon.png?v=1">
+<link rel="apple-touch-icon" href="date_icon.png?v=2">
+<link rel="icon" type="image/png" href="date_icon.png?v=2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&family=Noto+Serif+JP:wght@500;700&display=swap" rel="stylesheet">
@@ -142,6 +142,8 @@
   table.matrix .date-head { vertical-align: bottom; }
   table.matrix .date-head .lbl { display: block; max-width: 130px; white-space: normal; word-break: break-word; line-height: 1.3; }
   table.matrix .date-head label { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; color: var(--akane); font-weight: 500; margin-top: 4px; cursor: pointer; }
+  table.matrix .date-head .cap-in { display: flex; align-items: center; justify-content: center; gap: 3px; margin-top: 4px; font-size: 10px; color: var(--sumi-mute); font-weight: 500; }
+  table.matrix .date-head .cap-in input { width: 40px; padding: 2px 4px; font-size: 11px; text-align: center; border-radius: 4px; }
   table.matrix col.excluded, table.matrix td.excluded { background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(184,70,58,0.06) 5px, rgba(184,70,58,0.06) 10px); }
   table.matrix .maru { color: var(--matcha-d); font-weight: 700; }
   table.matrix .sankaku { color: var(--kuchi); font-weight: 700; }
@@ -219,7 +221,7 @@
   <section class="sheet hidden" id="matrix-card">
     <div class="sheet-step"><span class="num">参</span>STEP 3</div>
     <h2 class="sheet-title"><span class="ic" data-ic="list"></span>みんなの出欠 一覧</h2>
-    <p class="sheet-desc">○＝行ける、△＝条件付き、×＝行けない。売り切れなどで使えない日は、日付の下の「除外」にチェックを入れてください。</p>
+    <p class="sheet-desc">○＝行ける、△＝条件付き、×＝行けない。使えない日は「除外」にチェック。各日の「◯人まで」に入れる上限（残りチケットなど）を入れると、定員を考慮して計算します（空欄＝上限なし）。</p>
     <div class="matrix-wrap" id="matrix-wrap"></div>
   </section>
 
@@ -274,14 +276,14 @@ function hydrateIcons(root = document) {
     el.dataset.icHydrated = '1';
   });
 }
-document.getElementById('brand-mark').innerHTML = '<img src="date_icon.png?v=1" alt="">';
+document.getElementById('brand-mark').innerHTML = '<img src="date_icon.png?v=2" alt="">';
 hydrateIcons();
 const _obs = new MutationObserver(() => hydrateIcons());
 _obs.observe(document.body, { childList: true, subtree: true });
 
 /* ============== State ============== */
 // members: [{ name, excluded }]
-// dates:   [{ label, answers: ['○'|'△'|'×'|'', ...], excluded }]   answers[memberIndex] と対応
+// dates:   [{ label, answers: ['○'|'△'|'×'|'', ...], excluded, cap }]   answers[memberIndex] と対応 / cap=その日の上限人数(null=上限なし)
 let members = [];
 let dates   = [];
 let includeMaybe = false;
@@ -327,7 +329,7 @@ function handleText(text) {
     if (parsed.members.length < 1) return showErr('参加者が見つかりませんでした。');
     if (parsed.dates.length < 1) return showErr('日程候補が見つかりませんでした。');
     members = parsed.members.map(name => ({ name, excluded: false }));
-    dates = parsed.dates.map(d => ({ label: d.label, answers: d.answers, excluded: false }));
+    dates = parsed.dates.map(d => ({ label: d.label, answers: d.answers, excluded: false, cap: null }));
     renderConfirm();
     renderMatrix();
     recompute();
@@ -442,6 +444,7 @@ function renderMatrix() {
     html += `<th class="date-head${d.excluded ? ' excluded-th' : ''}">
       <span class="lbl">${esc(d.label)}</span>
       <label><input type="checkbox" ${d.excluded ? 'checked' : ''} onchange="toggleExclude(${di}, this.checked)"> 除外</label>
+      <div class="cap-in"><input type="number" min="0" placeholder="∞" value="${d.cap == null ? '' : d.cap}" onchange="setCap(${di}, this.value)"><span>人まで</span></div>
     </th>`;
   });
   html += '</tr></thead><tbody>';
@@ -463,6 +466,11 @@ function renderMatrix() {
   wrap.innerHTML = html;
 }
 function toggleExclude(di, checked) { dates[di].excluded = checked; renderMatrix(); recompute(); }
+function setCap(di, val) {
+  const n = parseInt(val);
+  dates[di].cap = (String(val).trim() === '' || isNaN(n) || n < 0) ? null : n;
+  recompute();   // フォーカスを保つため matrix は再描画しない
+}
 function countDay(di) {
   let maru = 0, sankaku = 0;
   members.forEach((m, mi) => {
@@ -502,6 +510,41 @@ function combinations(arr, k) {
   return res;
 }
 
+/* 定員を守った割り当て（誰をどの日に入れれば最も多く参加できるか）
+   = 容量つき二部マッチング。1日しか行けない人を優先するため制約の強い人から割り当てる。
+   cap が null の日は上限なし（Infinity）扱い。空欄のままなら従来の「のべ最大」と同じ結果になる。 */
+function maxAssign(combo) {
+  const sets = combo.map(di => availableSet(di));
+  const caps = combo.map(di => (dates[di].cap == null ? Infinity : Math.max(0, dates[di].cap)));
+  const people = [];
+  members.forEach((m, mi) => {
+    if (m.excluded) return;
+    const days = [];
+    sets.forEach((s, ci) => { if (s.has(mi)) days.push(ci); });
+    if (days.length) people.push({ mi, days });
+  });
+  people.sort((a, b) => a.days.length - b.days.length || a.mi - b.mi);  // 行ける日が少ない人を優先
+  const dayOcc = combo.map(() => []);          // ci → 割り当て済みの people index
+  const assignedDay = new Array(people.length).fill(-1);
+  function augment(pi, seen) {
+    for (const ci of people[pi].days) {
+      if (seen[ci]) continue;
+      seen[ci] = true;
+      if (dayOcc[ci].length < caps[ci]) { dayOcc[ci].push(pi); assignedDay[pi] = ci; return true; }
+      for (let k = 0; k < dayOcc[ci].length; k++) {            // 先客を別の日へ動かせるか
+        if (augment(dayOcc[ci][k], seen)) { dayOcc[ci][k] = pi; assignedDay[pi] = ci; return true; }
+      }
+    }
+    return false;
+  }
+  let matched = 0;
+  for (let pi = 0; pi < people.length; pi++) { if (augment(pi, combo.map(() => false))) matched++; }
+  const perDay = combo.map((di, ci) => ({ di, count: dayOcc[ci].length, cap: caps[ci] }));
+  const matchedMis = new Set(); const assignment = {};
+  people.forEach((p, pi) => { if (assignedDay[pi] >= 0) { matchedMis.add(p.mi); assignment[p.mi] = assignedDay[pi]; } });
+  return { matched, perDay, matchedMis, assignment };
+}
+
 function recompute() {
   const out = document.getElementById('analyze-result');
   const activeDates = dates.map((d, i) => i).filter(i => !dates[i].excluded);
@@ -510,31 +553,40 @@ function recompute() {
   if (k > activeDates.length) k = activeDates.length;
   if (activeDates.length === 0) { out.innerHTML = '<p class="hint"><span class="ic" data-ic="x"></span>候補日がすべて除外されています</p>'; return; }
 
-  const sets = {}; activeDates.forEach(di => sets[di] = availableSet(di));
-  const combos = combinations(activeDates, k).map(combo => {
-    const union = new Set();
-    combo.forEach(di => sets[di].forEach(mi => union.add(mi)));
-    const perDay = combo.map(di => ({ di, count: sets[di].size }));
-    const counts = perDay.map(p => p.count);
+  const cands = combinations(activeDates, k).map(combo => {
+    const res = maxAssign(combo);
+    const anyAvail = new Set();
+    combo.forEach(di => availableSet(di).forEach(mi => anyAvail.add(mi)));
+    const counts = res.perDay.map(p => p.count);
     const spread = Math.max(...counts) - Math.min(...counts);   // 偏りの小ささ（同点の並べ替え用）
-    return { combo, total: union.size, union, perDay, spread };
+    return { combo, total: res.matched, perDay: res.perDay, matchedMis: res.matchedMis, anyAvail, spread };
   });
-  combos.sort((a, b) => b.total - a.total || a.spread - b.spread);
+  cands.sort((a, b) => b.total - a.total || a.spread - b.spread);
 
   const activeMembers = members.map((m, i) => i).filter(i => !members[i].excluded);
-  const top = combos.slice(0, 5);
+  const top = cands.slice(0, 5);
   let html = '';
   top.forEach((cand, rank) => {
-    const missing = activeMembers.filter(mi => !cand.union.has(mi)).map(mi => members[mi].name);
-    const daysHtml = cand.perDay.map(p =>
-      `<span class="day">${esc(dates[p.di].label)} <b>${p.count}人</b></span>`).join('');
+    const daysHtml = cand.perDay.map(p => {
+      if (p.cap === Infinity) {   // 上限なし：その日に行ける人数（重複あり）を表示
+        return `<span class="day">${esc(dates[p.di].label)} <b>${availableSet(p.di).size}人</b></span>`;
+      }
+      const full = (p.count >= p.cap) ? ' <span style="color:var(--akane);font-weight:700;">満</span>' : '';
+      return `<span class="day">${esc(dates[p.di].label)} <b>${p.count}/${p.cap}人</b>${full}</span>`;
+    }).join('');
+    const noDay = activeMembers.filter(mi => !cand.anyAvail.has(mi)).map(mi => members[mi].name);
+    const capOut = activeMembers.filter(mi => cand.anyAvail.has(mi) && !cand.matchedMis.has(mi)).map(mi => members[mi].name);
+    let miss = '';
+    if (capOut.length) miss += `<div class="cand-miss">定員オーバーで入れない：${esc(capOut.join('、'))}</div>`;
+    if (noDay.length) miss += `<div class="cand-miss" style="color:var(--sumi-mute)">どの日も都合がつかない：${esc(noDay.join('、'))}</div>`;
+    if (!miss) miss = '<div class="cand-miss" style="color:var(--matcha-d)">全員が参加できます</div>';
     html += `<div class="cand${rank === 0 ? ' best' : ''}">
       <div class="cand-head">
         <span class="cand-rank">${rank === 0 ? '◎ おすすめ' : '第' + (rank + 1) + '案'}</span>
-        <span class="cand-total">のべ ${cand.total}<span class="u">人 参加可能</span></span>
+        <span class="cand-total">${cand.total}<span class="u">人 参加可能</span></span>
       </div>
       <div class="cand-days">${daysHtml}</div>
-      ${missing.length ? `<div class="cand-miss">どの日も参加できない：${esc(missing.join('、'))}</div>` : '<div class="cand-miss" style="color:var(--matcha-d)">全員が参加できます</div>'}
+      ${miss}
       <div class="cand-actions">
         <button class="btn btn-tonal btn-sm" onclick='goToDivide(${JSON.stringify(cand.combo)})'>
           <span class="ic" data-ic="shuffle"></span>この日程でチーム分けへ
@@ -548,25 +600,35 @@ function recompute() {
 /* ============== チーム分けへ連動 ============== */
 function goToDivide(combo) {
   // combo: 採用した日程の dateIndex 配列
-  const sets = combo.map(di => availableSet(di));
-  // 参加者プール = いずれかの採用日に参加できる人（重複なし）
-  const unionIdx = [];
-  members.forEach((m, mi) => {
-    if (m.excluded) return;
-    if (sets.some(s => s.has(mi))) unionIdx.push(mi);
-  });
-  if (unionIdx.length < 2) { alert('参加できる人が2名以上必要です'); return; }
-
-  const pool = unionIdx.map(mi => members[mi].name);
   const teamNames = combo.map(di => dates[di].label);
-  // 1日しか参加できない人 → その日に固定
+  const hasCap = combo.some(di => dates[di].cap != null);
+
+  if (hasCap) {
+    // 定員あり：定員を守った割り当てに従い、全員を担当日に固定（あふれた人は除外）
+    const res = maxAssign(combo);
+    const idx = members.map((m, mi) => mi).filter(mi => res.matchedMis.has(mi));
+    if (idx.length < 2) { alert('参加できる人が2名以上必要です'); return; }
+    const pool = idx.map(mi => members[mi].name);
+    const fixed = {};
+    idx.forEach((mi, poolPos) => { fixed[poolPos] = res.assignment[mi]; });
+    return saveAndGo({ pool, teamCount: combo.length, teamNames, fixed });
+  }
+
+  // 定員なし（従来）：いずれかの採用日に行ける人をプールに、1日のみの人は固定・複数日OKは自由
+  const sets = combo.map(di => availableSet(di));
+  const unionIdx = [];
+  members.forEach((m, mi) => { if (m.excluded) return; if (sets.some(s => s.has(mi))) unionIdx.push(mi); });
+  if (unionIdx.length < 2) { alert('参加できる人が2名以上必要です'); return; }
+  const pool = unionIdx.map(mi => members[mi].name);
   const fixed = {};
   unionIdx.forEach((mi, poolPos) => {
     const okDays = combo.map((di, ci) => ci).filter(ci => sets[ci].has(mi));
     if (okDays.length === 1) fixed[poolPos] = okDays[0];
   });
+  saveAndGo({ pool, teamCount: combo.length, teamNames, fixed });
+}
 
-  const payload = { pool, teamCount: combo.length, teamNames, fixed };
+function saveAndGo(payload) {
   localStorage.setItem('td_handoff', JSON.stringify(payload));
   location.href = 'index.html';
 }
