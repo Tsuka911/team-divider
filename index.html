@@ -244,6 +244,30 @@
   .pair-item .x:hover { opacity: 1; }
   .pair-divider { border: 0; border-top: 1px dashed var(--line); margin: 16px 0; }
 
+  /* こだわり条件（折りたたみグループ） */
+  .opt-group {
+    border: 1px solid var(--line); border-radius: 6px;
+    background: var(--kinari); margin-bottom: 10px; overflow: hidden;
+  }
+  .opt-group:last-child { margin-bottom: 0; }
+  .opt-group summary {
+    cursor: pointer; padding: 12px 14px;
+    font-weight: 600; font-size: 14px; color: var(--sumi);
+    display: flex; align-items: center; gap: 8px;
+    list-style: none; user-select: none; letter-spacing: 0.03em;
+  }
+  .opt-group summary::-webkit-details-marker { display: none; }
+  .opt-group summary .ic { color: var(--sumi-soft); }
+  .opt-chevron { margin-left: auto; color: var(--sumi-mute); font-size: 12px; transition: transform 0.18s; }
+  .opt-group[open] .opt-chevron { transform: rotate(180deg); }
+  .opt-group[open] summary { border-bottom: 1px solid var(--line-soft); background: var(--washi); }
+  .opt-body { padding: 14px; background: var(--washi); }
+  .opt-badge {
+    font-size: 11px; font-weight: 600;
+    background: var(--matcha-l); color: var(--matcha-d);
+    padding: 2px 9px; border-radius: 999px;
+  }
+
   /* Fixed assignment */
   .frow { display: grid; grid-template-columns: 92px 28px 1fr; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px dashed var(--line); }
   .frow:last-child { border-bottom: none; }
@@ -335,7 +359,8 @@
   body.ss-mode .lock-bar,
   body.ss-mode #history-card,
   body.ss-mode .action-row,
-  body.ss-mode header .sub { display: none !important; }
+  body.ss-mode header .sub,
+  body.ss-mode #avoid-note { display: none !important; }
   body.ss-mode #results-section { display: block !important; }
   body.ss-mode .ss-title { display: block !important; }
   body.ss-mode .result-title-wrap { display: none; }
@@ -420,47 +445,8 @@
     </section>
 
     <!-- Step 2 -->
-    <section class="sheet hidden" id="attr-card">
-      <div class="sheet-step"><span class="num">弐</span>STEP 2</div>
-      <h2 class="sheet-title"><span class="ic" data-ic="tag"></span>属性・レベル <span style="font-size:11px;color:var(--sumi-mute);font-weight:400;letter-spacing:0.05em;">任意</span></h2>
-      <p class="sheet-desc">タグを設定するとバランス良く振り分け。レベル（1〜5）を設定すると合計値が均等になります。</p>
-      <div id="tags-list"></div>
-    </section>
-
-    <!-- Step 3 -->
-    <section class="sheet hidden" id="pair-card">
-      <div class="sheet-step"><span class="num">参</span>STEP 3</div>
-      <h2 class="sheet-title"><span class="ic" data-ic="link"></span>ペア設定 <span style="font-size:11px;color:var(--sumi-mute);font-weight:400;letter-spacing:0.05em;">任意</span></h2>
-      <p class="sheet-desc">必ず一緒、または必ず別々にしたいペアを指定できます。</p>
-
-      <div class="pair-block">
-        <div class="pair-head together"><span class="ic" data-ic="link"></span>必ず同じチームにする</div>
-        <div class="pair-add">
-          <select id="together-a"></select>
-          <span class="conn">＋</span>
-          <select id="together-b"></select>
-          <button class="btn btn-tonal btn-sm" onclick="addPair('together')"><span class="ic" data-ic="plus"></span>追加</button>
-        </div>
-        <div class="pair-list" id="together-list"></div>
-      </div>
-
-      <hr class="pair-divider">
-
-      <div class="pair-block">
-        <div class="pair-head separate"><span class="ic" data-ic="unlink"></span>必ず別チームにする</div>
-        <div class="pair-add">
-          <select id="separate-a"></select>
-          <span class="conn">⊥</span>
-          <select id="separate-b"></select>
-          <button class="btn btn-akane btn-sm" onclick="addPair('separate')"><span class="ic" data-ic="plus"></span>追加</button>
-        </div>
-        <div class="pair-list" id="separate-list"></div>
-      </div>
-    </section>
-
-    <!-- Step 4 -->
     <section class="sheet">
-      <div class="sheet-step"><span class="num">肆</span>STEP 4</div>
+      <div class="sheet-step"><span class="num">弐</span>STEP 2</div>
       <h2 class="sheet-title"><span class="ic" data-ic="groups"></span>チームの分け方</h2>
 
       <div class="seg">
@@ -475,13 +461,78 @@
       <p class="hint" id="team-hint" style="display:none;"></p>
     </section>
 
-    <!-- Step 5 -->
-    <section class="sheet hidden" id="fixed-card">
-      <div class="sheet-step"><span class="num">伍</span>STEP 5</div>
-      <h2 class="sheet-title"><span class="ic" data-ic="pin"></span>固定メンバー <span style="font-size:11px;color:var(--sumi-mute);font-weight:400;letter-spacing:0.05em;">任意</span></h2>
-      <p class="sheet-desc">特定のチームに必ず入れたいメンバーを指定できます。</p>
-      <div id="fixed-list"></div>
-      <p class="hint hidden" id="fixed-hint-nocount" style="color:var(--kuchi);"><span class="ic" data-ic="sparkle"></span>先にチーム数を入力してください</p>
+    <!-- Step 3 -->
+    <section class="sheet hidden" id="options-card">
+      <div class="sheet-step"><span class="num">参</span>STEP 3</div>
+      <h2 class="sheet-title"><span class="ic" data-ic="tag"></span>こだわり条件 <span style="font-size:11px;color:var(--sumi-mute);font-weight:400;letter-spacing:0.05em;">任意</span></h2>
+      <p class="sheet-desc">ひらくと細かい希望を設定できます。何も設定しなくてもOKです。</p>
+
+      <details class="opt-group" id="must-group">
+        <summary>
+          <span class="ic" data-ic="lock"></span>かならず守る
+          <span class="opt-badge hidden" id="must-badge"></span>
+          <span class="opt-chevron">▾</span>
+        </summary>
+        <div class="opt-body">
+          <div class="pair-block">
+            <div class="pair-head together"><span class="ic" data-ic="link"></span>必ず同じチームにする</div>
+            <div class="pair-add">
+              <select id="together-a"></select>
+              <span class="conn">＋</span>
+              <select id="together-b"></select>
+              <button class="btn btn-tonal btn-sm" onclick="addPair('together')"><span class="ic" data-ic="plus"></span>追加</button>
+            </div>
+            <div class="pair-list" id="together-list"></div>
+          </div>
+
+          <hr class="pair-divider">
+
+          <div class="pair-block">
+            <div class="pair-head separate"><span class="ic" data-ic="unlink"></span>必ず別チームにする</div>
+            <div class="pair-add">
+              <select id="separate-a"></select>
+              <span class="conn">⊥</span>
+              <select id="separate-b"></select>
+              <button class="btn btn-akane btn-sm" onclick="addPair('separate')"><span class="ic" data-ic="plus"></span>追加</button>
+            </div>
+            <div class="pair-list" id="separate-list"></div>
+          </div>
+
+          <hr class="pair-divider">
+
+          <div class="pair-block">
+            <div class="pair-head" style="color:var(--kuchi);"><span class="ic" data-ic="pin"></span>このチームに固定する</div>
+            <div id="fixed-list"></div>
+            <p class="hint hidden" id="fixed-hint-nocount" style="color:var(--kuchi);"><span class="ic" data-ic="sparkle"></span>先にチーム数を入力してください</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="opt-group" id="soft-group">
+        <summary>
+          <span class="ic" data-ic="leaf"></span>なるべく配慮
+          <span class="opt-badge hidden" id="soft-badge"></span>
+          <span class="opt-chevron">▾</span>
+        </summary>
+        <div class="opt-body">
+          <div class="pair-block">
+            <div class="pair-head" style="color:var(--matcha-d);"><span class="ic" data-ic="tag"></span>タグ・レベルでバランス</div>
+            <p class="hint" style="margin:0 0 8px;">タグを設定するとバランス良く振り分け。レベル（1〜5）を設定すると合計値がなるべく均等になります。</p>
+            <div id="tags-list"></div>
+          </div>
+
+          <hr class="pair-divider">
+
+          <div class="pair-block hidden" id="avoid-hist-block">
+            <div class="pair-head" style="color:var(--ai);"><span class="ic" data-ic="history"></span>前回と同じ顔ぶれを避ける</div>
+            <label class="avoid-prev" style="width:100%;">
+              <input type="checkbox" id="avoid-hist-chk">
+              <span>前回同じチームだった人は、なるべく別のチームにする</span>
+            </label>
+            <p class="hint" id="avoid-hist-hint"></p>
+          </div>
+        </div>
+      </details>
     </section>
 
     <div class="err" id="err-box"><span class="ic" data-ic="x"></span><span id="err-text"></span></div>
@@ -505,16 +556,13 @@
       </div>
       <div class="ss-title">チーム分け結果</div>
 
+      <div id="avoid-note" class="hint hidden" style="margin:0 0 12px;"></div>
       <div class="results-grid" id="results-grid"></div>
 
       <div class="action-row">
         <button class="btn btn-ghost btn-sm" onclick="enterSS()"><span class="ic" data-ic="image"></span>スクショ用表示</button>
         <button class="btn btn-tonal btn-sm" onclick="downloadPNG()"><span class="ic" data-ic="save"></span>画像で保存</button>
         <button class="btn btn-ghost btn-sm" id="copy-btn" onclick="copyResultText()"><span class="ic" data-ic="copy"></span>テキストでコピー</button>
-        <label class="avoid-prev hidden" id="avoid-prev-wrap">
-          <input type="checkbox" id="avoid-prev-chk">
-          <span>前回と別チーム</span>
-        </label>
         <button class="btn btn-ghost btn-sm" onclick="redivide()"><span class="ic" data-ic="shuffle"></span>もう一度</button>
         <button class="btn btn-akane btn-sm" onclick="resetAll()"><span class="ic" data-ic="refresh"></span>最初から</button>
       </div>
@@ -582,6 +630,7 @@ let togetherPairs = [];
 let separatePairs = [];
 let savedConfig   = null;
 let lastTeams     = null;
+let lastAvoidInfo = null;   // 「前回と同じ組み合わせ回避」の結果（何組避けられたか）
 let teamNames     = [];
 let pendingTeamNames = null;   // 日程分析から受け取ったチーム名（＝開催日）
 let inputMode     = 'names';
@@ -603,6 +652,7 @@ const ACCENTS = [
   renderPresetSelect();
   renderHistory();
   applyHandoff();
+  document.getElementById('avoid-hist-chk').addEventListener('change', updateOptBadges);
 })();
 
 /* ============== 日程分析からの受け取り ============== */
@@ -622,7 +672,7 @@ function applyHandoff() {
   togetherPairs = []; separatePairs = [];
   renderTagsList(); renderPairList('together'); renderPairList('separate');
   refreshPairSelects();
-  ['attr-card','pair-card','fixed-card'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+  ['options-card'].forEach(id => document.getElementById(id).classList.remove('hidden'));
   document.getElementById('parse-btn').classList.add('hidden');
   document.getElementById('re-enter-btn').classList.remove('hidden');
 
@@ -641,6 +691,11 @@ function applyHandoff() {
       const sel = document.getElementById(`fs-${mi}`);
       if (sel && Number(ti) < tc) sel.value = String(ti);
     });
+    // 固定メンバーが引き継がれたときは「かならず守る」をひらいて見えるようにする
+    if (Object.keys(payload.fixed).length > 0) {
+      document.getElementById('must-group')?.setAttribute('open', '');
+      updateOptBadges();
+    }
   }
 
   // 受け取りバナー
@@ -668,7 +723,7 @@ function setInputMode(mode) {
   document.getElementById('names-mode-area').classList.toggle('hidden', mode !== 'names');
   document.getElementById('count-mode-area').classList.toggle('hidden', mode !== 'count');
   if (mode === 'count') {
-    ['attr-card','pair-card','fixed-card'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    ['options-card'].forEach(id => document.getElementById(id).classList.add('hidden'));
   }
 }
 function setTeamMode(mode) {
@@ -712,7 +767,7 @@ function parseNames() {
   togetherPairs = []; separatePairs = [];
   renderTagsList(); renderPairList('together'); renderPairList('separate');
   refreshPairSelects(); refreshFixedList();
-  ['attr-card','pair-card','fixed-card'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+  ['options-card'].forEach(id => document.getElementById(id).classList.remove('hidden'));
   document.getElementById('parse-btn').classList.add('hidden');
   document.getElementById('re-enter-btn').classList.remove('hidden');
   hideErr();
@@ -721,7 +776,8 @@ function parseNames() {
 function reEnterNames() {
   members = []; togetherPairs = []; separatePairs = [];
   ['tags-list','together-list','separate-list','fixed-list'].forEach(id => document.getElementById(id).innerHTML = '');
-  ['attr-card','pair-card','fixed-card'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  ['options-card'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  updateOptBadges();
   document.getElementById('parse-btn').classList.remove('hidden');
   document.getElementById('re-enter-btn').classList.add('hidden');
   hideErr();
@@ -737,7 +793,7 @@ function restoreFromStorage() {
   document.getElementById('restore-btn').classList.add('hidden');
   members = names.map(name => ({ name, tags: [], level: null }));
   renderTagsList(); refreshPairSelects(); refreshFixedList();
-  ['attr-card','pair-card','fixed-card'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+  ['options-card'].forEach(id => document.getElementById(id).classList.remove('hidden'));
   document.getElementById('parse-btn').classList.add('hidden');
   document.getElementById('re-enter-btn').classList.remove('hidden');
   hideErr();
@@ -778,7 +834,7 @@ function loadPreset(name) {
   togetherPairs = []; separatePairs = [];
   renderTagsList(); renderPairList('together'); renderPairList('separate');
   refreshPairSelects(); refreshFixedList();
-  ['attr-card','pair-card','fixed-card'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+  ['options-card'].forEach(id => document.getElementById(id).classList.remove('hidden'));
   document.getElementById('parse-btn').classList.add('hidden');
   document.getElementById('re-enter-btn').classList.remove('hidden');
   document.getElementById('preset-select').value = '';
@@ -827,11 +883,13 @@ function renderTagsList() {
     lvInp.addEventListener('input', function() {
       const v = parseInt(this.value);
       members[mi].level = (v >= 1 && v <= 5) ? v : null;
+      updateOptBadges();
     });
     lv.appendChild(lvInp);
     row.appendChild(name); row.appendChild(tags); row.appendChild(lv);
     c.appendChild(row);
   });
+  updateOptBadges();
 }
 function removeTag(mi, ti) { members[mi].tags.splice(ti, 1); renderTagsList(); }
 
@@ -870,6 +928,7 @@ function renderPairList(type) {
     item.innerHTML = `<span><strong>${esc(members[a]?.name ?? `#${a}`)}</strong>　${conn}　<strong>${esc(members[b]?.name ?? `#${b}`)}</strong></span><span class="x" onclick="removePair('${type}',${idx})">${window.TDIcons.get('x', 14)}</span>`;
     c.appendChild(item);
   });
+  updateOptBadges();
 }
 
 /* ============== Fixed ============== */
@@ -887,9 +946,11 @@ function refreshFixedList() {
     const arr = document.createElement('div'); arr.className = 'arr'; arr.innerHTML = window.TDIcons.get('arrowRight', 14);
     const sel = document.createElement('select'); sel.id = `fs-${mi}`;
     sel.innerHTML = `<option value="">自動で振り分け</option>` + Array.from({length: tc}, (_, i) => `<option value="${i}">チーム ${teamLbl(i)}</option>`).join('');
+    sel.addEventListener('change', updateOptBadges);
     row.appendChild(name); row.appendChild(arr); row.appendChild(sel);
     c.appendChild(row);
   });
+  updateOptBadges();
 }
 
 /* ============== Divide ============== */
@@ -920,13 +981,75 @@ function divideTeams() {
   teamNames = (pendingTeamNames && pendingTeamNames.length === tc)
     ? [...pendingTeamNames]
     : Array.from({length: tc}, (_, i) => `チーム ${teamLbl(i)}`);
+  // 「前回同じチームだった人はなるべく別に」：履歴の最新エントリから同チームだったペアを集める
+  let avoidNamePairs = [];
+  if (inputMode === 'names' && document.getElementById('avoid-hist-chk')?.checked) {
+    const hist = getHistory();
+    if (hist.length > 0) avoidNamePairs = pairsFromTeams(hist[0].teams);
+  }
   savedConfig = {
     pool: pool.map(m => ({...m, tags:[...m.tags]})), tc, fixed,
     togetherPairs: togetherPairs.map(p => [...p]),
     separatePairs: separatePairs.map(p => [...p]),
+    avoidNamePairs,
   };
-  const teams = runDivide(pool, tc, fixed, togetherPairs, separatePairs);
+  const teams = runDivideAvoiding(pool, tc, fixed, togetherPairs, separatePairs, avoidNamePairs);
   displayResults(teams);
+}
+
+/* チーム一覧から「同じチームだった2人組」をすべて列挙（名前ベース） */
+function pairsFromTeams(teams) {
+  const pairs = [];
+  teams.forEach(team => {
+    for (let i = 0; i < team.length; i++)
+      for (let j = i + 1; j < team.length; j++)
+        pairs.push([team[i].name, team[j].name]);
+  });
+  return pairs;
+}
+function pairKey(a, b) { return a < b ? a + '\n' + b : b + '\n' + a; }
+
+/* 何度も分け直してみて、条件（必須指定・人数バランス・ゆるい回避）に一番合う案を採用する */
+function runDivideAvoiding(pool, tc, fixed, together, separate, avoidNamePairs) {
+  const poolNames = new Set(pool.map(m => m.name));
+  const avoidSet = new Set(
+    (avoidNamePairs || [])
+      .filter(([a, b]) => poolNames.has(a) && poolNames.has(b))
+      .map(([a, b]) => pairKey(a, b))
+  );
+  // 「必ず同じ／別チーム」の指定（名前ベースに変換して、守れている案を最優先で選ぶ）
+  const togetherNames = together.map(([a, b]) => [pool[a]?.name, pool[b]?.name]).filter(([a, b]) => a && b);
+  const separateNames = separate.map(([a, b]) => [pool[a]?.name, pool[b]?.name]).filter(([a, b]) => a && b);
+  const sameTeam = (teams, a, b) => teams.some(t => t.some(m => m.name === a) && t.some(m => m.name === b));
+  let best = null, bestScore = Infinity, bestAvoid = Infinity;
+  const tries = avoidSet.size > 0 ? 80 : 30;
+  for (let t = 0; t < tries; t++) {
+    const teams = runDivide(pool, tc, fixed, together, separate);
+    let avoidHits = 0;
+    if (avoidSet.size > 0) {
+      teams.forEach(team => {
+        for (let i = 0; i < team.length; i++)
+          for (let j = i + 1; j < team.length; j++)
+            if (avoidSet.has(pairKey(team[i].name, team[j].name))) avoidHits++;
+      });
+    }
+    let hard = 0;
+    togetherNames.forEach(([a, b]) => { if (!sameTeam(teams, a, b)) hard++; });
+    separateNames.forEach(([a, b]) => { if (sameTeam(teams, a, b)) hard++; });
+    // 人数の偏り：割り切れないときの±1人は許容し、それ以上の偏りに罰点
+    const sizes = teams.map(t => t.length);
+    const allowGap = pool.length % tc === 0 ? 0 : 1;
+    const imbalance = Math.max(0, Math.max(...sizes) - Math.min(...sizes) - allowGap);
+    // レベル合計の偏り（レベル未設定なら人数の偏りと同じ動きになるだけで無害）
+    const teamLvs = teams.map(t => t.reduce((s, m) => s + (m.level ?? 3), 0));
+    const lvSpread = teamLvs.length ? Math.max(...teamLvs) - Math.min(...teamLvs) : 0;
+    // 必須指定の違反 ＞ 人数の偏り ＞ ゆるい回避 ＞ レベルの偏り、の順に重くする
+    const score = hard * 1000 + imbalance * 100 + avoidHits * 10 + lvSpread;
+    if (score < bestScore) { bestScore = score; best = teams; bestAvoid = avoidHits; }
+    if (bestScore === 0) break;
+  }
+  lastAvoidInfo = avoidSet.size > 0 ? { requested: avoidSet.size, remaining: bestAvoid } : null;
+  return best;
 }
 
 function runDivide(pool, tc, fixed, together, separate) {
@@ -943,14 +1066,24 @@ function runDivide(pool, tc, fixed, together, separate) {
   free.forEach(m => { if (!used.has(m._idx)) units.push([m]); });
   const hasLevel = free.some(m => m.level !== null);
   if (hasLevel) {
-    units.forEach(u => { u._lvSum = u.reduce((s, m) => s + (m.level ?? 3), 0); });
-    units.sort((a, b) => b._lvSum - a._lvSum);
-    let dir = 1, ti = 0;
+    const lvOf = m => m.level ?? 3;
+    const cap = Math.ceil(pool.length / tc);   // 1チームの上限人数（これを超えない範囲で配る）
+    // 固定メンバーのレベルも合計に入れる
+    const teamLv = teams.map(t => t.reduce((s, m) => s + lvOf(m), 0));
+    units.forEach(u => { u._lvSum = u.reduce((s, m) => s + lvOf(m), 0); });
+    shuffle(units);   // 同条件同士の並びをランダムにして、分け直すたび結果が変わるようにする
+    // 大きい塊（ペア）から先に。人数に空きがあるチームの中で、レベル合計が少ない所へ入れる
+    units.sort((a, b) => (b.length - a.length) || (b._lvSum - a._lvSum));
     units.forEach(unit => {
-      unit.forEach(m => teams[ti].push(m));
-      ti += dir;
-      if (ti >= teams.length) { ti = teams.length - 1; dir = -1; }
-      else if (ti < 0) { ti = 0; dir = 1; }
+      let cand = teams.map((_, i) => i).filter(i => teams[i].length + unit.length <= cap);
+      if (cand.length === 0) cand = teams.map((_, i) => i);
+      let best = cand[0];
+      cand.forEach(i => {
+        if (teamLv[i] < teamLv[best] ||
+            (teamLv[i] === teamLv[best] && teams[i].length < teams[best].length)) best = i;
+      });
+      unit.forEach(m => teams[best].push(m));
+      teamLv[best] += unit._lvSum;
     });
   } else {
     shuffle(units);
@@ -960,6 +1093,8 @@ function runDivide(pool, tc, fixed, together, separate) {
       unit.forEach(m => teams[min].push(m));
     });
   }
+  const inTogether = new Set();
+  together.forEach(([x, y]) => { inTogether.add(x); inTogether.add(y); });
   for (let attempt = 0; attempt < 30; attempt++) {
     let swapped = false;
     separate.forEach(([a, b]) => {
@@ -969,12 +1104,22 @@ function runDivide(pool, tc, fixed, together, separate) {
         if (t.some(m => m._idx === b)) tB = ti;
       });
       if (tA === tB && tA >= 0) {
+        // 動かす人：固定指定・「必ず同じチーム」指定のない方を優先して選ぶ
+        const movable = [b, a].filter(i => !fixedSet.has(i) && !inTogether.has(i));
+        const mv = movable.length ? movable[0] : (!fixedSet.has(b) ? b : (!fixedSet.has(a) ? a : -1));
+        if (mv < 0) return;
         const others = teams.map((_, i) => i).filter(i => i !== tA);
         if (others.length === 0) return;
         const target = others[Math.floor(Math.random() * others.length)];
         if (teams[target].length === 0) return;
-        const swapIdx = Math.floor(Math.random() * teams[target].length);
-        const posB = teams[tA].findIndex(m => m._idx === b);
+        // 交換相手も、固定指定・「必ず同じチーム」指定のない人を優先
+        const free2 = teams[target].map((_, i) => i)
+          .filter(i => !fixedSet.has(teams[target][i]._idx) && !inTogether.has(teams[target][i]._idx));
+        const fallback = teams[target].map((_, i) => i).filter(i => !fixedSet.has(teams[target][i]._idx));
+        const idxs = free2.length ? free2 : fallback;
+        if (idxs.length === 0) return;
+        const swapIdx = idxs[Math.floor(Math.random() * idxs.length)];
+        const posB = teams[tA].findIndex(m => m._idx === mv);
         if (posB < 0) return;
         const tmp = teams[tA][posB];
         teams[tA][posB] = teams[target][swapIdx];
@@ -1040,6 +1185,19 @@ function buildCard(team, ti) {
 
 function displayResults(teams) {
   lastTeams = teams;
+  const note = document.getElementById('avoid-note');
+  if (lastAvoidInfo) {
+    note.classList.remove('hidden');
+    if (lastAvoidInfo.remaining === 0) {
+      note.style.color = 'var(--matcha-d)';
+      note.innerHTML = window.TDIcons.get('check', 14) + '<span>前回と同じ組み合わせをすべて避けられました</span>';
+    } else {
+      note.style.color = 'var(--kuchi)';
+      note.innerHTML = window.TDIcons.get('sparkle', 14) + `<span>人数の都合で、前回と同じ組み合わせが ${lastAvoidInfo.remaining} 組だけ残っています</span>`;
+    }
+  } else {
+    note.classList.add('hidden');
+  }
   const grid = document.getElementById('results-grid');
   grid.innerHTML = '';
   teams.forEach((team, ti) => grid.appendChild(buildCard(team, ti)));
@@ -1058,7 +1216,6 @@ function displayResults(teams) {
   document.getElementById('input-zone').classList.add('locked');
   document.getElementById('lock-bar').classList.add('show');
   addToHistory(teams, teamNames);
-  if (getHistory().length >= 2) document.getElementById('avoid-prev-wrap').classList.remove('hidden');
 }
 
 /* ============== History ============== */
@@ -1070,10 +1227,51 @@ function addToHistory(teams, names) {
   localStorage.setItem('td_history', JSON.stringify(hist));
   renderHistory();
 }
+/* 履歴があるときだけ「前回の結果をゆるく参考にする」欄を表示する */
+function updateAvoidHistUI() {
+  const block = document.getElementById('avoid-hist-block');
+  if (!block) return;
+  const hist = getHistory();
+  if (hist.length === 0) {
+    block.classList.add('hidden');
+    const chk = document.getElementById('avoid-hist-chk');
+    if (chk) chk.checked = false;
+    updateOptBadges();
+    return;
+  }
+  block.classList.remove('hidden');
+  const d = new Date(hist[0].ts);
+  const label = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('avoid-hist-hint').innerHTML =
+    window.TDIcons.get('sparkle', 14) +
+    `<span>履歴のいちばん新しい結果（${label}）を「前回」として使います。人数の都合で全部は避けられないこともあります。</span>`;
+}
+
+/* 折りたたみを閉じていても、設定があることがひと目でわかるバッジ */
+function updateOptBadges() {
+  const fixedCount = members.reduce((n, _, mi) => {
+    const sel = document.getElementById(`fs-${mi}`);
+    return n + (sel && sel.value !== '' ? 1 : 0);
+  }, 0);
+  const must = togetherPairs.length + separatePairs.length + fixedCount;
+  const hasAttr = members.some(m => m.tags.length > 0 || m.level !== null);
+  const avoidOn = !!document.getElementById('avoid-hist-chk')?.checked;
+  const soft = (hasAttr ? 1 : 0) + (avoidOn ? 1 : 0);
+  setOptBadge('must-badge', must > 0 ? `${must}件 設定中` : '');
+  setOptBadge('soft-badge', soft > 0 ? '設定中' : '');
+}
+function setOptBadge(id, text) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.classList.toggle('hidden', !text);
+}
+
 function renderHistory() {
   const hist = getHistory();
   const card = document.getElementById('history-card');
   const list = document.getElementById('history-list');
+  updateAvoidHistUI();
   if (!card) return;
   if (hist.length === 0) { card.classList.add('hidden'); return; }
   card.classList.remove('hidden');
@@ -1203,18 +1401,15 @@ function canvasRoundRect(ctx, x, y, w, h, r) {
 /* ============== Redivide / unlock / reset ============== */
 function redivide() {
   if (!savedConfig) return;
-  const { pool, tc, fixed, togetherPairs: tp, separatePairs: sp } = savedConfig;
-  let extraSep = [];
-  if (document.getElementById('avoid-prev-chk')?.checked && lastTeams) {
-    lastTeams.forEach(team => {
-      for (let i = 0; i < team.length; i++) for (let j = i+1; j < team.length; j++) {
-        const ai = pool.findIndex(m => m.name === team[i].name);
-        const bi = pool.findIndex(m => m.name === team[j].name);
-        if (ai >= 0 && bi >= 0) extraSep.push([ai, bi]);
-      }
-    });
+  const { pool, tc, fixed, togetherPairs: tp, separatePairs: sp, avoidNamePairs = [] } = savedConfig;
+  let extraAvoid = [];
+  if (document.getElementById('avoid-hist-chk')?.checked && lastTeams) {
+    extraAvoid = pairsFromTeams(lastTeams);
   }
-  const teams = runDivide(pool.map(m => ({...m, tags:[...m.tags]})), tc, fixed, tp, [...sp, ...extraSep]);
+  const teams = runDivideAvoiding(
+    pool.map(m => ({...m, tags:[...m.tags]})), tc, fixed, tp, sp,
+    [...avoidNamePairs, ...extraAvoid]
+  );
   displayResults(teams);
 }
 
@@ -1228,7 +1423,11 @@ function resetAll() {
   document.getElementById('input-zone').classList.remove('locked');
   document.getElementById('lock-bar').classList.remove('show');
   members = []; savedConfig = null; lastTeams = null; teamNames = [];
-  pendingTeamNames = null;
+  pendingTeamNames = null; lastAvoidInfo = null;
+  const ahChk = document.getElementById('avoid-hist-chk'); if (ahChk) ahChk.checked = false;
+  document.getElementById('avoid-note').classList.add('hidden');
+  ['must-group','soft-group'].forEach(id => document.getElementById(id)?.removeAttribute('open'));
+  updateOptBadges();
   document.getElementById('handoff-banner')?.remove();
   togetherPairs = []; separatePairs = [];
   document.getElementById('results-section').style.display = 'none';
@@ -1239,7 +1438,7 @@ function resetAll() {
   document.getElementById('team-hint').style.display = 'none';
   document.getElementById('name-count-pill').classList.add('hidden');
   ['tags-list','fixed-list','together-list','separate-list'].forEach(id => document.getElementById(id).innerHTML = '');
-  ['attr-card','pair-card','fixed-card'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  ['options-card'].forEach(id => document.getElementById(id).classList.add('hidden'));
   setInputMode('names'); setTeamMode('count');
   const saved = localStorage.getItem('td_members');
   if (saved && saved.split('\n').map(s => s.trim()).filter(Boolean).length >= 2) {
@@ -1247,7 +1446,6 @@ function resetAll() {
   }
   document.getElementById('parse-btn').classList.remove('hidden');
   document.getElementById('re-enter-btn').classList.add('hidden');
-  document.getElementById('avoid-prev-wrap').classList.add('hidden');
   document.body.classList.remove('ss-mode');
   hideErr();
   window.scrollTo({ top: 0, behavior: 'smooth' });
