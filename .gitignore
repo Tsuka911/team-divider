@@ -1,0 +1,9 @@
+# Claude Code のローカル設定（このPC固有・共有不要）
+.claude/
+
+# 環境変数・機密情報
+.env
+.env.*
+
+# OS が作る一時ファイル
+.DS_Store
