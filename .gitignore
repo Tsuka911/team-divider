@@ -7,3 +7,6 @@
 
 # OS が作る一時ファイル
 .DS_Store
+
+# 未使用の古いアイコン
+team_icon.png
