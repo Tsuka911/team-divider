@@ -523,13 +523,24 @@
 
           <hr class="pair-divider">
 
-          <div class="pair-block hidden" id="avoid-hist-block">
+          <div class="pair-block" id="avoid-hist-block">
             <div class="pair-head" style="color:var(--ai);"><span class="ic" data-ic="history"></span>前回と同じ顔ぶれを避ける</div>
             <label class="avoid-prev" style="width:100%;">
               <input type="checkbox" id="avoid-hist-chk">
               <span>前回同じチームだった人は、なるべく別のチームにする</span>
             </label>
-            <p class="hint" id="avoid-hist-hint"></p>
+            <div id="avoid-src-area" class="hidden" style="margin-top:12px;">
+              <div class="seg" id="avoid-src-seg">
+                <button id="as-hist" class="on" onclick="setAvoidSource('hist')"><span class="ic" data-ic="history"></span>履歴から</button>
+                <button id="as-manual" onclick="setAvoidSource('manual')"><span class="ic" data-ic="edit"></span>自分で入力</button>
+              </div>
+              <p class="hint" id="avoid-hist-hint" style="margin-top:0;"></p>
+              <div id="avoid-manual-area" class="hidden">
+                <textarea id="avoid-manual-ta" style="min-height:80px;" placeholder="チームA：田中 直子、佐藤 健&#10;チームB：山田 さくら、高橋 大輔"></textarea>
+                <p class="hint"><span class="ic" data-ic="sparkle"></span>前回のチームを1行に1チームずつ。名前は「、」で区切ってください。このアプリの「テキストでコピー」の文をそのまま貼り付けてもOKです</p>
+                <p class="hint hidden" id="avoid-manual-stat"></p>
+              </div>
+            </div>
           </div>
         </div>
       </details>
@@ -631,6 +642,7 @@ let separatePairs = [];
 let savedConfig   = null;
 let lastTeams     = null;
 let lastAvoidInfo = null;   // 「前回と同じ組み合わせ回避」の結果（何組避けられたか）
+let avoidSource   = 'hist'; // 「前回」の出どころ：'hist'＝履歴から／'manual'＝自分で入力
 let teamNames     = [];
 let pendingTeamNames = null;   // 日程分析から受け取ったチーム名（＝開催日）
 let inputMode     = 'names';
@@ -652,7 +664,12 @@ const ACCENTS = [
   renderPresetSelect();
   renderHistory();
   applyHandoff();
-  document.getElementById('avoid-hist-chk').addEventListener('change', updateOptBadges);
+  document.getElementById('avoid-hist-chk').addEventListener('change', function() {
+    document.getElementById('avoid-src-area').classList.toggle('hidden', !this.checked);
+    if (this.checked) updateAvoidHistUI();
+    updateOptBadges();
+  });
+  document.getElementById('avoid-manual-ta').addEventListener('input', updateManualStat);
 })();
 
 /* ============== 日程分析からの受け取り ============== */
@@ -981,11 +998,20 @@ function divideTeams() {
   teamNames = (pendingTeamNames && pendingTeamNames.length === tc)
     ? [...pendingTeamNames]
     : Array.from({length: tc}, (_, i) => `チーム ${teamLbl(i)}`);
-  // 「前回同じチームだった人はなるべく別に」：履歴の最新エントリから同チームだったペアを集める
+  // 「前回同じチームだった人はなるべく別に」：履歴の最新エントリ、または手入力から同チームだったペアを集める
   let avoidNamePairs = [];
   if (inputMode === 'names' && document.getElementById('avoid-hist-chk')?.checked) {
-    const hist = getHistory();
-    if (hist.length > 0) avoidNamePairs = pairsFromTeams(hist[0].teams);
+    if (avoidSource === 'manual') {
+      avoidNamePairs = pairsFromTeams(parseManualPrevTeams());
+      if (avoidNamePairs.length === 0) return showErr('「前回のチーム」を読み取れませんでした。1行に1チームずつ、名前を「、」で区切って入力してください');
+      const pn = new Set(pool.map(m => m.name));
+      if (!avoidNamePairs.some(([a, b]) => pn.has(a) && pn.has(b))) {
+        return showErr('「前回のチーム」の名前が、現在のメンバーとひとつも一致しません。同じ表記（姓名・スペースの有無）で入力してください');
+      }
+    } else {
+      const hist = getHistory();
+      if (hist.length > 0) avoidNamePairs = pairsFromTeams(hist[0].teams);
+    }
   }
   savedConfig = {
     pool: pool.map(m => ({...m, tags:[...m.tags]})), tc, fixed,
@@ -1227,24 +1253,66 @@ function addToHistory(teams, names) {
   localStorage.setItem('td_history', JSON.stringify(hist));
   renderHistory();
 }
-/* 履歴があるときだけ「前回の結果をゆるく参考にする」欄を表示する */
+/* 「前回」の出どころ切り替え：履歴から／自分で入力 */
+function setAvoidSource(src) {
+  avoidSource = src;
+  document.getElementById('as-hist').classList.toggle('on', src === 'hist');
+  document.getElementById('as-manual').classList.toggle('on', src === 'manual');
+  document.getElementById('avoid-manual-area').classList.toggle('hidden', src !== 'manual');
+  document.getElementById('avoid-hist-hint').classList.toggle('hidden', src !== 'hist');
+  if (src === 'manual') updateManualStat();
+}
+
+/* 手入力欄から前回のチーム構成を読み取る（「チームA：田中、佐藤」形式にも対応） */
+function parseManualPrevTeams() {
+  const ta = document.getElementById('avoid-manual-ta');
+  if (!ta) return [];
+  return ta.value.split('\n')
+    .map(line => line.replace(/^[^、,，・]*[:：]/, ''))          // 行頭の「チームA：」などを除去
+    .map(line => line.split(/[、,，・;；\t]+/).map(s => s.trim()).filter(Boolean))
+    .filter(t => t.length >= 2)                                   // 2名以上の行だけがチームとして有効
+    .map(t => t.map(name => ({ name })));
+}
+
+/* 手入力の読み取り結果をその場で表示（名前の打ち間違いに気づけるように） */
+function updateManualStat() {
+  const el = document.getElementById('avoid-manual-stat');
+  if (!el) return;
+  const teams = parseManualPrevTeams();
+  const names = teams.flat().map(m => m.name);
+  if (names.length === 0) { el.classList.add('hidden'); return; }
+  const memberNames = new Set(members.map(m => m.name));
+  const unmatched = [...new Set(names.filter(n => !memberNames.has(n)))];
+  el.classList.remove('hidden');
+  if (unmatched.length === 0) {
+    el.style.color = 'var(--matcha-d)';
+    el.innerHTML = window.TDIcons.get('check', 14) +
+      `<span>${teams.length}チーム・${names.length}名を読み取りました</span>`;
+  } else {
+    el.style.color = 'var(--kuchi)';
+    el.innerHTML = window.TDIcons.get('sparkle', 14) +
+      `<span>${teams.length}チーム・${names.length}名を読み取りました。メンバーに見つからない名前：${esc(unmatched.join('、'))}</span>`;
+  }
+}
+
+/* 履歴の有無に応じて「履歴から／自分で入力」の表示を整える */
 function updateAvoidHistUI() {
-  const block = document.getElementById('avoid-hist-block');
-  if (!block) return;
+  const seg = document.getElementById('avoid-src-seg');
+  if (!seg) return;
   const hist = getHistory();
   if (hist.length === 0) {
-    block.classList.add('hidden');
-    const chk = document.getElementById('avoid-hist-chk');
-    if (chk) chk.checked = false;
-    updateOptBadges();
+    // 履歴がない → 自分で入力のみ
+    seg.classList.add('hidden');
+    setAvoidSource('manual');
     return;
   }
-  block.classList.remove('hidden');
+  seg.classList.remove('hidden');
   const d = new Date(hist[0].ts);
   const label = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
   document.getElementById('avoid-hist-hint').innerHTML =
     window.TDIcons.get('sparkle', 14) +
     `<span>履歴のいちばん新しい結果（${label}）を「前回」として使います。人数の都合で全部は避けられないこともあります。</span>`;
+  setAvoidSource(avoidSource);
 }
 
 /* 折りたたみを閉じていても、設定があることがひと目でわかるバッジ */
@@ -1425,6 +1493,10 @@ function resetAll() {
   members = []; savedConfig = null; lastTeams = null; teamNames = [];
   pendingTeamNames = null; lastAvoidInfo = null;
   const ahChk = document.getElementById('avoid-hist-chk'); if (ahChk) ahChk.checked = false;
+  document.getElementById('avoid-src-area').classList.add('hidden');
+  document.getElementById('avoid-manual-ta').value = '';
+  document.getElementById('avoid-manual-stat').classList.add('hidden');
+  avoidSource = getHistory().length > 0 ? 'hist' : 'manual';
   document.getElementById('avoid-note').classList.add('hidden');
   ['must-group','soft-group'].forEach(id => document.getElementById(id)?.removeAttribute('open'));
   updateOptBadges();
